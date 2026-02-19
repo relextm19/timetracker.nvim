@@ -2,6 +2,8 @@ local sqlite = require("sqlite")
 
 local M = {}
 
+-- maybe change this to get the root markers from the lsp config
+local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
 
 local db = sqlite({
@@ -28,6 +30,16 @@ local function newSession(file_name, project_name, start_time, start_date, end_t
     }
 end
 
+local function getProjectName(file_path)
+    local marker_path = vim.fs.find(root_markers, { upward = true, path = file_path })[1]
+    local project_name = "No project"
+    if marker_path then
+        local project_root = vim.fs.dirname(marker_path)
+        project_name = vim.fn.fnamemodify(project_root, ":t")
+    end
+    return project_name
+end
+
 M.setup = function()
     local group = vim.api.nvim_create_augroup("TimeTrackerGroup", { clear = true })
 
@@ -48,7 +60,7 @@ M.setup = function()
                 local file_path = vim.api.nvim_buf_get_name(event.buf)
                 local file_name = vim.fn.fnamemodify(file_path, ":t")
                 if time_spent > 0 and (file_name and file_name ~= "") then
-                    local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+                    local project_name = getProjectName(file_path)
                     local start_date = os.date("%Y-%m-%d", start_time)
                     local end_date = os.date("%Y-%m-%d", end_time)
 
@@ -61,6 +73,5 @@ M.setup = function()
         end
     })
 end
-
 
 return M
