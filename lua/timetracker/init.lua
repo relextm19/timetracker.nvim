@@ -2,7 +2,7 @@ local sqlite = require("sqlite")
 
 local M = {}
 
--- maybe change this to get the root markers from the lsp config
+-- TODO: maybe change this to get the root markers from the lsp config
 local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
 
@@ -74,4 +74,25 @@ M.setup = function()
     })
 end
 
+local function openFloatingWindow()
+    local width = math.floor(vim.o.columns * 0.7)
+    local height = math.floor(vim.o.lines * 0.7)
+    local row = math.floor((vim.o.lines - height) / 2)
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    local opts = {
+        relative = "editor",
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = "minimal",
+        border = "rounded"
+    }
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_open_win(buf, true, opts)
+end
+
+vim.keymap.set("n", "<leader>t", function() openFloatingWindow() end)
 return M
