@@ -98,6 +98,10 @@ local function create_header(starting_row, starting_col, bg_width, content)
     return make_win(opts, false, content)
 end
 
+local function create_body()
+
+end
+
 local function create_background(width, height, row, col)
     local opts = {
         relative = "editor",
@@ -111,23 +115,29 @@ local function create_background(width, height, row, col)
     return make_win(opts, true)
 end
 
-local function openFloatingWindow(ratio)
+local function open_floating_window(ratio)
     local bg_width = math.floor(vim.o.columns * ratio)
     local bg_height = math.floor(vim.o.lines * ratio)
     local start_row = math.floor((vim.o.lines - bg_height) / 2)
     local start_col = math.floor((vim.o.columns - bg_width) / 2)
+
     local bg_win = create_background(bg_width, bg_height, start_row, start_col)
-    local header_win = create_header(start_row, start_col, bg_width, { "[1] languages | [2] projects" })
+    local attached = {}
+    local header_win = create_header(start_row, start_col, bg_width, { "󰌠 [1] Languages  │   [2] Projects" })
+    table.insert(attached, header_win)
+
     vim.api.nvim_create_autocmd("WinClosed", {
         pattern = tostring(bg_win),
         callback = function()
-            if vim.api.nvim_win_is_valid(header_win) then
-                vim.api.nvim_win_close(header_win, true)
+            for _, win_id in ipairs(attached) do
+                if vim.api.nvim_win_is_valid(win_id) then
+                    vim.api.nvim_win_close(win_id, true)
+                end
             end
         end,
         once = true
     })
 end
 
-vim.keymap.set("n", "<leader>t", function() openFloatingWindow(0.7) end)
+vim.keymap.set("n", "<leader>t", function() open_floating_window(0.7) end)
 return M
