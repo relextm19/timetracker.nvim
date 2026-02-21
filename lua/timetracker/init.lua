@@ -74,12 +74,31 @@ M.setup = function()
     })
 end
 
-local function openFloatingWindow()
-    local width = math.floor(vim.o.columns * 0.7)
-    local height = math.floor(vim.o.lines * 0.7)
-    local row = math.floor((vim.o.lines - height) / 2)
-    local col = math.floor((vim.o.columns - width) / 2)
+local function make_win(opts, enter, content)
+    local buf = vim.api.nvim_create_buf(false, true)
+    if content then vim.api.nvim_buf_set_lines(buf, 0, -1, false, content) end
+    local win = vim.api.nvim_open_win(buf, enter, opts)
+    return win
+end
 
+local function create_header(starting_row, starting_col, bg_width, content)
+    local content_width = string.len(content[1])
+    local col = math.floor((bg_width - content_width) / 2)
+
+    local opts = {
+        relative = "editor",
+        width = content_width,
+        height = 1,
+        row = starting_row,
+        col = starting_col + col,
+        style = "minimal",
+        zindex = 67,
+    }
+
+    return make_win(opts, false, content)
+end
+
+local function create_background(width, height, row, col)
     local opts = {
         relative = "editor",
         width = width,
@@ -87,12 +106,28 @@ local function openFloatingWindow()
         row = row,
         col = col,
         style = "minimal",
-        border = "rounded"
     }
 
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_open_win(buf, true, opts)
+    return make_win(opts, true)
 end
 
-vim.keymap.set("n", "<leader>t", function() openFloatingWindow() end)
+local function openFloatingWindow(ratio)
+    local bg_width = math.floor(vim.o.columns * ratio)
+    local bg_height = math.floor(vim.o.lines * ratio)
+    local start_row = math.floor((vim.o.lines - bg_height) / 2)
+    local start_col = math.floor((vim.o.columns - bg_width) / 2)
+    local bg_win = create_background(bg_width, bg_height, start_row, start_col)
+    local header_win = create_header(start_row, start_col, bg_width, { "[1] languages | [2] projects" })
+    vim.api.nvim_create_autocmd("WinClosed", {
+        pattern = tostring(bg_win),
+        callback = function()
+            if vim.api.nvim_win_is_valid(header_win) then
+                vim.api.nvim_win_close(header_win, true)
+            end
+        end,
+        once = true
+    })
+end
+
+vim.keymap.set("n", "<leader>t", function() openFloatingWindow(0.7) end)
 return M
