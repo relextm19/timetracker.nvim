@@ -1,4 +1,4 @@
-local sqlite = require("sqlite")
+local curl = require("plenary.curl")
 
 local M = {}
 
@@ -6,28 +6,35 @@ local M = {}
 local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
 
-local db = sqlite({
-    uri = vim.fs.normalize(vim.fn.stdpath("data") .. '/timetracker.db'),
-    sessions = {
-        ID          = true,
-        FileName    = "text",
-        ProjectName = "text",
-        StartTime   = "integer",
-        StartDate   = "text",
-        EndTime     = "integer",
-        EndDate     = "text",
-    }
-})
-
-local function newSession(file_name, project_name, start_time, start_date, end_time, end_date)
+local function newSession(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
     return {
-        FileName    = file_name,
-        ProjectName = project_name,
-        StartTime   = start_time,
-        StartDate   = start_date,
-        EndTime     = end_time,
-        EndDate     = end_date,
+        fileName     = file_name,
+        projectName  = project_name,
+        languageName = language_name,
+        startTime    = start_time,
+        startDate    = start_date,
+        endTime      = end_time,
+        endDate      = end_date,
     }
+end
+
+local function sendSession(session)
+    curl.post("http://localhost:42069/sessions", {
+        body = vim.fn.json_encode(session),
+        headers = {
+            content_type = "application/json"
+        },
+        callback = function(response)
+            -- We must use vim.schedule to interact with Neovim UI from a background task
+            vim.schedule(function()
+                if response.status == 201 then
+                    vim.notify("Session tracked successfully!", vim.log.levels.INFO)
+                else
+                    vim.notify("Failed to track session: " .. response.status, vim.log.levels.ERROR)
+                end
+            end)
+        end
+    })
 end
 
 local function getProjectName(file_path)
@@ -61,11 +68,13 @@ M.setup = function()
                 local file_name = vim.fn.fnamemodify(file_path, ":t")
                 if time_spent > 0 and (file_name and file_name ~= "") then
                     local project_name = getProjectName(file_path)
+                    local language_name = vim.fn.fnamemodify(file_name, ":e")
                     local start_date = os.date("%Y-%m-%d", start_time)
                     local end_date = os.date("%Y-%m-%d", end_time)
 
-                    local session = newSession(file_name, project_name, start_time, start_date, end_time, end_date)
-                    db.sessions:insert(session)
+                    local session = newSession(file_name, project_name, language_name, start_time, start_date, end_time,
+                        end_date)
+                    sendSession(session)
                 end
 
                 start_times[event.buf] = nil
