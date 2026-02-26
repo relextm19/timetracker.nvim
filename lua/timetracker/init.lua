@@ -83,14 +83,14 @@ M.setup = function()
     })
 end
 
-local layout
+local dashboard_layout
 
 local function open_dashboard()
-    if layout then
-        layout:close()
-        layout = nil
+    if dashboard_layout then
+        dashboard_layout:close()
+        dashboard_layout = nil
     else
-        layout = Snacks.layout.new({
+        dashboard_layout = Snacks.layout.new({
             layout = {
                 backdrop = 60,
                 width = 0.8,
@@ -115,6 +115,57 @@ local function open_dashboard()
     end
 end
 
+local login_layout
+
+local function next_win()
+    vim.cmd("wincmd w")
+    vim.cmd("startinsert")
+end
+
+local function prev_win()
+    vim.cmd("wincmd W")
+    vim.cmd("startinsert")
+end
+
+local function open_login()
+    if login_layout then
+        login_layout:close()
+        login_layout = nil
+    end
+
+    local form_keys = {
+        ["<Tab>"] = { next_win, mode = { "n", "i" } },
+        ["<S-Tab>"] = { prev_win, mode = { "n", "i" } },
+        -- ["<CR>"] = { submit_form, mode = { "n", "i" } },
+        q = "close"
+    }
+
+    login_layout = Snacks.layout.new({
+        layout = {
+            backdrop = 60,
+            width = 50,
+            position = "float",
+            box = "vertical",
+            { win = "input1", height = 1 },
+            { win = "input2", height = 1 },
+            { win = "input3", height = 1 },
+        },
+        wins = {
+            input1 = Snacks.win({ title = " Email ", border = "rounded", keys = form_keys }),
+            input2 = Snacks.win({ title = " Password ", border = "rounded", keys = form_keys }),
+            input3 = Snacks.win({ title = " Confirm Password ", border = "rounded", keys = form_keys }),
+        }
+    })
+
+    vim.schedule(function()
+        if login_layout and login_layout.wins.input1 then
+            login_layout.wins.input1:focus()
+            vim.cmd("startinsert")
+        end
+    end)
+end
+
 vim.keymap.set("n", "<leader>t", function() open_dashboard() end)
+vim.keymap.set("n", "<leader>l", function() open_login() end)
 
 return M
