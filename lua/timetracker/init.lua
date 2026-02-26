@@ -74,7 +74,7 @@ M.setup = function()
 
                     local session = newSession(file_name, project_name, language_name, start_time, start_date, end_time,
                         end_date)
-                    sendSession(session)
+                    -- sendSession(session)
                 end
 
                 start_times[event.buf] = nil
@@ -83,70 +83,38 @@ M.setup = function()
     })
 end
 
-local function make_win(opts, enter, content)
-    local buf = vim.api.nvim_create_buf(false, true)
-    if content then vim.api.nvim_buf_set_lines(buf, 0, -1, false, content) end
-    local win = vim.api.nvim_open_win(buf, enter, opts)
-    return win
+local layout
+
+local function open_dashboard()
+    if layout then
+        layout:close()
+        layout = nil
+    else
+        layout = Snacks.layout.new({
+            layout = {
+                backdrop = 60,
+                width = 0.8,
+                height = 0.8,
+                position = "float",
+                box = "vertical",
+                {
+                    box = "horizontal",
+                    height = 0.7,
+                    { win = "left_pane",  width = 0.5 },
+                    { win = "right_pane", width = 0.5 },
+                },
+                { win = "bottom_pane", height = 0.3 },
+            },
+
+            wins = {
+                left_pane = Snacks.win({ title = "  Projects  ", border = "rounded" }),
+                right_pane = Snacks.win({ title = "  Files  ", border = "rounded" }),
+                bottom_pane = Snacks.win({ title = "  Languages  ", border = "rounded" }),
+            }
+        })
+    end
 end
 
-local function create_header(starting_row, starting_col, bg_width, content)
-    local content_width = string.len(content[1])
-    local col = math.floor((bg_width - content_width) / 2)
+vim.keymap.set("n", "<leader>t", function() open_dashboard() end)
 
-    local opts = {
-        relative = "editor",
-        width = content_width,
-        height = 1,
-        row = starting_row,
-        col = starting_col + col,
-        style = "minimal",
-        zindex = 67,
-    }
-
-    return make_win(opts, false, content)
-end
-
-local function create_body()
-
-end
-
-local function create_background(width, height, row, col)
-    local opts = {
-        relative = "editor",
-        width = width,
-        height = height,
-        row = row,
-        col = col,
-        style = "minimal",
-    }
-
-    return make_win(opts, true)
-end
-
-local function open_floating_window(ratio)
-    local bg_width = math.floor(vim.o.columns * ratio)
-    local bg_height = math.floor(vim.o.lines * ratio)
-    local start_row = math.floor((vim.o.lines - bg_height) / 2)
-    local start_col = math.floor((vim.o.columns - bg_width) / 2)
-
-    local bg_win = create_background(bg_width, bg_height, start_row, start_col)
-    local attached = {}
-    local header_win = create_header(start_row, start_col, bg_width, { "󰌠 [1] Languages  │   [2] Projects" })
-    table.insert(attached, header_win)
-
-    vim.api.nvim_create_autocmd("WinClosed", {
-        pattern = tostring(bg_win),
-        callback = function()
-            for _, win_id in ipairs(attached) do
-                if vim.api.nvim_win_is_valid(win_id) then
-                    vim.api.nvim_win_close(win_id, true)
-                end
-            end
-        end,
-        once = true
-    })
-end
-
-vim.keymap.set("n", "<leader>t", function() open_floating_window(0.7) end)
 return M
