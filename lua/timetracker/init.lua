@@ -115,16 +115,39 @@ local function open_dashboard()
     end
 end
 
+
 local login_layout
 
-local function next_win()
-    vim.cmd("wincmd w")
+local function next_input(curr)
+    local next = (curr % 3) + 1
+    local input_name = "input" .. next
+
+    login_layout.wins[input_name]:focus()
     vim.cmd("startinsert")
+
+    return next
 end
 
-local function prev_win()
-    vim.cmd("wincmd W")
-    vim.cmd("startinsert")
+local function submit_form()
+    local email    = vim.trim(login_layout.wins.input1:lines(1, 1)[1]) or ""
+    local password = vim.trim(login_layout.wins.input2:lines(1, 1)[1]) or ""
+    local confirm  = vim.trim(login_layout.wins.input3:lines(1, 1)[1]) or ""
+    if email == "" or password == "" then
+        vim.notify("Email and Password are required!", vim.log.levels.ERROR)
+        return
+    end
+
+    if password ~= confirm then
+        vim.notify("Passwords do not match!", vim.log.levels.ERROR)
+        return
+    end
+
+    login_layout:close()
+    login_layout = nil
+
+    vim.cmd("stopinsert")
+
+    vim.notify("Successfully captured login for: " .. email, vim.log.levels.INFO)
 end
 
 local function open_login()
@@ -133,11 +156,27 @@ local function open_login()
         login_layout = nil
     end
 
+    local curr_win_idx = 1
+
     local form_keys = {
-        ["<Tab>"] = { next_win, mode = { "n", "i" } },
-        ["<S-Tab>"] = { prev_win, mode = { "n", "i" } },
-        -- ["<CR>"] = { submit_form, mode = { "n", "i" } },
-        q = "close"
+        ["<Tab>"] = {
+            function()
+                curr_win_idx = next_input(curr_win_idx)
+            end,
+            mode = { "n", "i" }
+        },
+        ["<CR>"] = { submit_form, mode = { "n", "i", "v" } },
+        q = {
+            --go dry
+            function()
+                if login_layout then
+                    login_layout:close()
+                    login_layout = nil
+                end
+                vim.cmd("stopinsert")
+            end,
+            mode = { "n", "v" }
+        }
     }
 
     login_layout = Snacks.layout.new({
