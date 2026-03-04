@@ -6,7 +6,7 @@ local M = {}
 local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
 
-local function newSession(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
+local function new_session(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
     return {
         fileName     = file_name,
         projectName  = project_name,
@@ -72,7 +72,7 @@ M.setup = function()
                     local start_date = os.date("%Y-%m-%d", start_time)
                     local end_date = os.date("%Y-%m-%d", end_time)
 
-                    local session = newSession(file_name, project_name, language_name, start_time, start_date, end_time,
+                    local session = new_session(file_name, project_name, language_name, start_time, start_date, end_time,
                         end_date)
                     -- sendSession(session)
                 end
@@ -128,6 +128,13 @@ local function next_input(curr)
     return next
 end
 
+local function new_user(email, password)
+    return {
+        email = email,
+        password = password,
+    }
+end
+
 local function submit_form()
     local email    = vim.trim(login_layout.wins.input1:lines(1, 1)[1]) or ""
     local password = vim.trim(login_layout.wins.input2:lines(1, 1)[1]) or ""
@@ -147,7 +154,22 @@ local function submit_form()
 
     vim.cmd("stopinsert")
 
-    vim.notify("Successfully captured login for: " .. email, vim.log.levels.INFO)
+    curl.post("http://localhost:42069/users", {
+        body = vim.fn.json_encode(new_user(email, password)),
+        print(vim.fn.json_encode(new_user(email, password))),
+        headers = {
+            content_type = "application/json"
+        },
+        callback = function(response)
+            vim.schedule(function()
+                if response.status == 201 then
+                    vim.notify("Logged in successfully", vim.log.levels.INFO)
+                else
+                    vim.notify("Failed to login" .. response.status, vim.log.levels.ERROR)
+                end
+            end)
+        end
+    })
 end
 
 local function open_login()
@@ -206,5 +228,22 @@ end
 
 vim.keymap.set("n", "<leader>t", function() open_dashboard() end)
 vim.keymap.set("n", "<leader>l", function() open_login() end)
+vim.keymap.set("n", "<leader>.", function()
+    curl.post("http://localhost:42069/users", {
+        body = vim.fn.json_encode(new_user("c@e.com", "kutas")),
+        headers = {
+            content_type = "application/json"
+        },
+        callback = function(response)
+            vim.schedule(function()
+                if response.status == 201 then
+                    vim.notify("Logged in successfully", vim.log.levels.INFO)
+                else
+                    vim.notify("Failed to login" .. response.status, vim.log.levels.ERROR)
+                end
+            end)
+        end
+    })
+end)
 
 return M
