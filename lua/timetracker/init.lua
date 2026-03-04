@@ -135,6 +135,25 @@ local function new_user(email, password)
     }
 end
 
+local function save_token(token)
+    local data_dir = vim.fn.stdpath("data")
+    local token_path = data_dir .. "/timetracker_token" -- Name this for your plugin
+
+    local file = io.open(token_path, "w")
+    if not file then
+        vim.notify("Failed to open file for saving token", vim.log.levels.ERROR)
+        return false
+    end
+
+    file:write(token)
+    file:close()
+
+    --read only
+    vim.fn.setfperm(token_path, "r--------")
+
+    return true
+end
+
 local function submit_form()
     local email    = vim.trim(login_layout.wins.input1:lines(1, 1)[1]) or ""
     local password = vim.trim(login_layout.wins.input2:lines(1, 1)[1]) or ""
@@ -163,7 +182,13 @@ local function submit_form()
         callback = function(response)
             vim.schedule(function()
                 if response.status == 201 then
-                    vim.notify("Logged in successfully", vim.log.levels.INFO)
+                    local succes, parsed = pcall(vim.fn.json_decode, response.body)
+                    if succes and parsed.token then
+                        save_token(parsed.token)
+                        vim.notify("Logged in successfully", vim.log.levels.INFO)
+                    else
+                        vim.notify("Malformed response from server", vim.log.levels.ERROR)
+                    end
                 else
                     vim.notify("Failed to login" .. response.status, vim.log.levels.ERROR)
                 end
@@ -228,22 +253,5 @@ end
 
 vim.keymap.set("n", "<leader>t", function() open_dashboard() end)
 vim.keymap.set("n", "<leader>l", function() open_login() end)
-vim.keymap.set("n", "<leader>.", function()
-    curl.post("http://localhost:42069/users", {
-        body = vim.fn.json_encode(new_user("c@e.com", "kutas")),
-        headers = {
-            content_type = "application/json"
-        },
-        callback = function(response)
-            vim.schedule(function()
-                if response.status == 201 then
-                    vim.notify("Logged in successfully", vim.log.levels.INFO)
-                else
-                    vim.notify("Failed to login" .. response.status, vim.log.levels.ERROR)
-                end
-            end)
-        end
-    })
-end)
 
 return M
