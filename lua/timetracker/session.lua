@@ -1,9 +1,11 @@
 local curl = require("plenary.curl")
+local auth = require("timetracker.auth")
 
 local M = {}
 
 local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
+local token = auth.load_token()
 
 local function new_session(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
     return {
@@ -18,11 +20,19 @@ local function new_session(file_name, project_name, language_name, start_time, s
 end
 
 local function sendSession(session)
-    curl.post("http://localhost:42069/sessions", {
+    local headers = {
+        content_type = "application/json"
+    }
+    if token then
+        headers["Authorization"] = "Bearer " .. token
+    else
+        vim.notify("Token not present", vim.log.levels.ERROR)
+        return
+    end
+
+    curl.post("http://localhost:42069/session", {
         body = vim.fn.json_encode(session),
-        headers = {
-            content_type = "application/json"
-        },
+        headers = headers,
         callback = function(response)
             vim.schedule(function()
                 if response.status == 201 then
@@ -70,9 +80,8 @@ M.setup = function()
                     local start_date = os.date("%Y-%m-%d", start_time)
                     local end_date = os.date("%Y-%m-%d", end_time)
 
-                    local session = new_session(file_name, project_name, language_name, start_time, start_date, end_time,
-                        end_date)
-                    -- sendSession(session)
+                    local session = new_session(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
+                    sendSession(session)
                 end
 
                 start_times[event.buf] = nil
