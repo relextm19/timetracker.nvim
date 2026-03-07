@@ -74,7 +74,7 @@ local function submit_register()
 
     vim.cmd("stopinsert")
 
-    curl.post("http://localhost:42069/users", {
+    curl.post("http://localhost:42069/register", {
         body = vim.fn.json_encode(new_user(email, password)),
         headers = {
             content_type = "application/json"
@@ -110,7 +110,7 @@ local function submit_login()
 
     vim.cmd("stopinsert")
 
-    curl.post("http://localhost:42069/users/login", {
+    curl.post("http://localhost:42069/login", {
         body = vim.fn.json_encode(new_user(email, password)),
         headers = {
             content_type = "application/json"
