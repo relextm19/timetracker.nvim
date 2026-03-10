@@ -12,27 +12,39 @@ local function format_time(seconds)
     return string.format("%dh %dm %ds", hours, minutes, secs)
 end
 
+--standard lua format accepts up to 99 repeated characters or sth like that so use a custom function
+local function pad_right(str, target_width)
+    local spaces_needed = math.max(0, target_width - #str)
+    return str .. string.rep(" ", spaces_needed)
+end
+
 local function get_wrapped_lines(item, name_col_width)
-    local name_width = #item.name
     local time_str = format_time(item.totalTime)
     local result = {}
+    local remaining_name = item.name
 
-    if name_width <= name_col_width then
-        table.insert(result, string.format("%-" .. name_col_width .. "s %s", item.name, time_str))
-    else
-        local lhs = string.sub(item.name, 1, name_col_width)
-        local rhs = string.sub(item.name, name_col_width + 1)
+    while #remaining_name > name_col_width do
+        local chunk = string.sub(remaining_name, 1, name_col_width)
+        table.insert(result, chunk)
 
-        table.insert(result, string.format("%-" .. name_col_width .. "s", lhs))
-        table.insert(result, string.format("%-" .. name_col_width .. "s %s", rhs, time_str))
+        remaining_name = string.sub(remaining_name, name_col_width + 1)
     end
+
+    local padded_name = pad_right(remaining_name, name_col_width)
+    table.insert(result, padded_name .. " " .. time_str)
 
     return result
 end
 
 local function build_list(items, win)
     local lines = {}
-    local name_col_width = 20
+
+    local longest_time_str = -1
+    for _, item in ipairs(items) do
+        longest_time_str = math.max(longest_time_str, #format_time(item.totalTime))
+    end
+    -- -1 accounts for the space in the final string
+    local name_col_width = vim.api.nvim_win_get_width(win) - longest_time_str - 1
 
     for _, item in ipairs(items) do
         local wrapped_lines = get_wrapped_lines(item, name_col_width)
