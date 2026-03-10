@@ -35,9 +35,7 @@ local function sendSession(session)
         headers = headers,
         callback = function(response)
             vim.schedule(function()
-                if response.status == 201 then
-                    vim.notify("Session tracked successfully!", vim.log.levels.INFO)
-                else
+                if response.status ~= 201 then
                     vim.notify("Failed to track session: " .. response.status, vim.log.levels.ERROR)
                 end
             end)
@@ -80,12 +78,45 @@ M.setup = function()
                     local start_date = os.date("%Y-%m-%d", start_time)
                     local end_date = os.date("%Y-%m-%d", end_time)
 
-                    local session = new_session(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
+                    local session = new_session(file_name, project_name, language_name, start_time, start_date, end_time,
+                        end_date)
                     sendSession(session)
                 end
 
                 start_times[event.buf] = nil
             end
+        end
+    })
+end
+
+M.fetch_sessions = function(callback)
+    local headers = {
+        content_type = "application/json"
+    }
+    if token then
+        headers["Authorization"] = "Bearer " .. token
+    else
+        vim.notify("Token not present", vim.log.levels.ERROR)
+        return
+    end
+
+    curl.get("http://localhost:42069/session", {
+        headers = headers,
+        callback = function(response)
+            vim.schedule(function()
+                if response.status == 200 then
+                    local success, parsed = pcall(vim.fn.json_decode, response.body)
+                    if success then
+                        if callback then
+                            callback(parsed)
+                        end
+                    else
+                        vim.notify("Failed to parse response", vim.log.levels.ERROR)
+                    end
+                else
+                    vim.notify("Failed to fetch sessions: " .. response.status, vim.log.levels.ERROR)
+                end
+            end)
         end
     })
 end
