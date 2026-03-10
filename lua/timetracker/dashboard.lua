@@ -12,17 +12,34 @@ local function format_time(seconds)
     return string.format("%dh %dm %ds", hours, minutes, secs)
 end
 
-local function build_list(items, win)
-    local lines = {}
-    local win_width = vim.api.nvim_win_get_width(win)
-    local max_name_len = -1
+local function get_wrapped_lines(item, name_col_width)
+    local name_width = #item.name
+    local time_str = format_time(item.totalTime)
+    local result = {}
 
-    for _, item in ipairs(items) do
-        max_name_len = math.max(max_name_len, #item.name)
+    if name_width <= name_col_width then
+        table.insert(result, string.format("%-" .. name_col_width .. "s %s", item.name, time_str))
+    else
+        local lhs = string.sub(item.name, 1, name_col_width)
+        local rhs = string.sub(item.name, name_col_width + 1)
+
+        table.insert(result, string.format("%-" .. name_col_width .. "s", lhs))
+        table.insert(result, string.format("%-" .. name_col_width .. "s %s", rhs, time_str))
     end
 
+    return result
+end
+
+local function build_list(items, win)
+    local lines = {}
+    local name_col_width = 20
+
     for _, item in ipairs(items) do
-        table.insert(lines, string.format("  %-" .. max_name_len .. "s %s", item.name, format_time(item.totalTime)))
+        local wrapped_lines = get_wrapped_lines(item, name_col_width)
+
+        for _, line in ipairs(wrapped_lines) do
+            table.insert(lines, line)
+        end
     end
     return lines
 end
