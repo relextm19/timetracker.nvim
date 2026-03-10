@@ -4,18 +4,17 @@ local M = {}
 
 local dashboard_layout
 
+local function pad_right(str, target_width)
+    local spaces_needed = math.max(0, target_width - #str)
+    return str .. string.rep(" ", spaces_needed)
+end
+
 local function format_time(seconds)
     local hours = math.floor(seconds / 3600)
     local minutes = math.floor((seconds % 3600) / 60)
     local secs = seconds % 60
 
-    return string.format("%dh %dm %ds", hours, minutes, secs)
-end
-
---standard lua format accepts up to 99 repeated characters or sth like that so use a custom function
-local function pad_right(str, target_width)
-    local spaces_needed = math.max(0, target_width - #str)
-    return str .. string.rep(" ", spaces_needed)
+    return string.format("%d:%02d:%02d", hours, minutes, secs)
 end
 
 local function get_wrapped_lines(item, name_col_width)
