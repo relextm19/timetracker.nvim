@@ -59,6 +59,7 @@ local function submit_register()
     local email    = vim.trim(auth_layout.wins.input1:lines(1, 1)[1]) or ""
     local password = vim.trim(auth_layout.wins.input2:lines(1, 1)[1]) or ""
     local confirm  = vim.trim(auth_layout.wins.input3:lines(1, 1)[1]) or ""
+    -- FIXME: the notifications dont show up until you close the window
     if email == "" or password == "" then
         vim.notify("Email and Password are required!", vim.log.levels.ERROR)
         return
@@ -146,6 +147,32 @@ local function build_inputs(title, form_keys)
     return inputs
 end
 
+local function build_header(mode)
+    local buf = vim.api.nvim_create_buf(false, true)
+
+    local login_text = (mode == "login" and " ◉ [1] Login " or " ○ [1] Login ")
+    local reg_text = (mode == "register" and " ◉ [2] Register " or " ○ [2] Register ")
+    local header_text = login_text .. "    " .. reg_text
+
+    local layout_width = 50
+    local text_width = vim.fn.strdisplaywidth(header_text)
+
+    local padding_amount = math.floor((layout_width - text_width) / 2)
+
+    local left_padding = string.rep(" ", math.max(0, padding_amount))
+
+    local centered_text = left_padding .. header_text
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { centered_text })
+    vim.bo[buf].modifiable = false
+
+    return Snacks.win({
+        buf = buf,
+        height = 1,
+        focusable = false,
+    })
+end
+
 local function build_layout()
     local submit_fn = current_mode == "login" and submit_login or submit_register
     local input_count = current_mode == "login" and 2 or 3
@@ -173,8 +200,6 @@ local function build_layout()
         ["1"] = {
             function()
                 current_mode = "login"
-                auth_layout:close()
-                auth_layout = nil
                 build_layout()
             end,
             mode = { "n", "i" }
@@ -182,8 +207,6 @@ local function build_layout()
         ["2"] = {
             function()
                 current_mode = "register"
-                auth_layout:close()
-                auth_layout = nil
                 build_layout()
             end,
             mode = { "n", "i" }
@@ -197,6 +220,9 @@ local function build_layout()
         position = "float",
         box = "vertical",
     }
+
+    wins.header = build_header(current_mode)
+    table.insert(layout, { win = "header", height = 1 })
 
     local title = current_mode == "login" and "login" or "register"
     local inputs = build_inputs(title, form_keys)
@@ -221,10 +247,10 @@ end
 
 M.toggle = function()
     local existing_token = load_token()
-    if existing_token then
-        vim.notify("Already logged in", vim.log.levels.INFO)
-        return
-    end
+    -- if existing_token then
+    --     vim.notify("Already logged in", vim.log.levels.INFO)
+    --     return
+    -- end
 
     if auth_layout then
         auth_layout:close()
