@@ -199,6 +199,10 @@ local function build_layout()
         },
         ["1"] = {
             function()
+                if auth_layout then
+                    auth_layout:close()
+                    auth_layout = nil
+                end
                 current_mode = "login"
                 build_layout()
             end,
@@ -206,6 +210,10 @@ local function build_layout()
         },
         ["2"] = {
             function()
+                if auth_layout then
+                    auth_layout:close()
+                    auth_layout = nil
+                end
                 current_mode = "register"
                 build_layout()
             end,
@@ -251,15 +259,14 @@ M.toggle = function()
     --     vim.notify("Already logged in", vim.log.levels.INFO)
     --     return
     -- end
-
     if auth_layout then
         auth_layout:close()
         auth_layout = nil
         vim.cmd("stopinsert")
         return
+    else
+        build_layout()
     end
-
-    build_layout()
 end
 
 M.load_token = load_token
