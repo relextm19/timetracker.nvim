@@ -59,10 +59,12 @@ local function update_dashboard(data)
     local project_lines = build_list(data.byProject, dashboard_layout.wins.projects.win)
     local file_lines = build_list(data.byFile, dashboard_layout.wins.files.win)
     local language_lines = build_list(data.byLanguage, dashboard_layout.wins.languages.win)
+    local time_lines = build_list(data.byTime, dashboard_layout.wins.time_frame.win)
 
     vim.api.nvim_buf_set_lines(dashboard_layout.wins.projects.buf, 0, -1, false, project_lines)
     vim.api.nvim_buf_set_lines(dashboard_layout.wins.files.buf, 0, -1, false, file_lines)
     vim.api.nvim_buf_set_lines(dashboard_layout.wins.languages.buf, 0, -1, false, language_lines)
+    vim.api.nvim_buf_set_lines(dashboard_layout.wins.time_frame.buf, 0, -1, false, time_lines)
 end
 
 local function toggle_dashboard()
@@ -80,16 +82,22 @@ local function toggle_dashboard()
                 {
                     box = "horizontal",
                     height = 0.7,
-                    { win = "projects", width = 0.5 },
-                    { win = "files",    width = 0.5 },
+                    { win = "projects" },
+                    { win = "files" },
                 },
-                { win = "languages", height = 0.3 },
+                {
+                    box = "horizontal",
+                    height = 0.3,
+                    { win = "languages" },
+                    { win = "time_frame" },
+                }
             },
 
             wins = {
                 projects = Snacks.win({ title = "  Projects  ", border = "rounded" }),
                 files = Snacks.win({ title = "  Files  ", border = "rounded" }),
                 languages = Snacks.win({ title = "  Languages  ", border = "rounded" }),
+                time_frame = Snacks.win({ title = "  Time Frame  ", border = "rounded" }),
             }
         })
 
