@@ -20,7 +20,7 @@ local function new_session(file_name, project_name, language_name, start_time, s
     }
 end
 
-local function sendSession(session)
+local function send_session(session)
     --if the user is using some plugin like lazy git or some other thging that doesnt provide language name no need to throw an error when sending session
     if not session.languageName or session.languageName == "" then
         return
@@ -36,7 +36,7 @@ local function sendSession(session)
         return
     end
 
-    curl.post("http://localhost:42069/session", {
+    curl.post("http://localhost:42069/sessions", {
         body = vim.fn.json_encode(session),
         headers = headers,
         callback = function(response)
@@ -49,7 +49,7 @@ local function sendSession(session)
     })
 end
 
-local function getProjectName(file_path)
+local function get_project_name(file_path)
     local marker_path = vim.fs.find(root_markers, { upward = true, path = file_path })[1]
     local project_name = "No project"
     if marker_path then
@@ -79,14 +79,14 @@ M.setup = function()
                 local file_path = vim.api.nvim_buf_get_name(event.buf)
                 local file_name = vim.fn.fnamemodify(file_path, ":t")
                 if time_spent > 0 and (file_name and file_name ~= "") then
-                    local project_name = getProjectName(file_path)
+                    local project_name = get_project_name(file_path)
                     local language_name = vim.fn.fnamemodify(file_name, ":e")
                     local start_date = os.date("%Y-%m-%d", start_time)
                     local end_date = os.date("%Y-%m-%d", end_time)
 
                     local session = new_session(file_name, project_name, language_name, start_time, start_date, end_time,
                         end_date)
-                    sendSession(session)
+                    send_session(session)
                 end
 
                 start_times[event.buf] = nil
@@ -106,7 +106,7 @@ M.fetch_sessions = function(callback)
         return
     end
 
-    curl.get("http://localhost:42069/session", {
+    curl.get("http://localhost:42069/sessions", {
         headers = headers,
         callback = function(response)
             vim.schedule(function()
