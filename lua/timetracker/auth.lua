@@ -5,7 +5,7 @@ local helper = require("timetracker.helper")
 local M = {}
 
 local auth_layout
-local current_mode = "login"
+local current_mode = "register"
 local auth_ns = vim.api.nvim_create_namespace("auth_ui")
 
 local function next_input(curr, max)
@@ -93,7 +93,7 @@ local function build_inputs(form_keys)
 
     table.insert(inputs, Snacks.win({ title = " Email ", border = "rounded", keys = form_keys }))
     table.insert(inputs, Snacks.win({ title = " Password ", border = "rounded", keys = form_keys }))
-    table.insert(inputs, Snacks.win({ title = " Confirm Password ", border = "rounded", keys = form_keys }))
+    table.insert(inputs, Snacks.win({ title = " Confirm Password ", border = "rounded", keys = form_keys, show = false }))
 
     return inputs
 end
@@ -118,10 +118,10 @@ local function build_header_buf(mode, targets, text, container_width)
 end
 
 local function swap_layout()
-    local header_text = ("[1] Login  [2] Register")
+    local header_text = ("[1] Register  [2] Login")
     local targets = {
-        login = "%[1%] Login",
-        register = "%[2%] Register"
+        login = "%[2%] Login",
+        register = "%[1%] Register"
     }
     local header_buf = build_header_buf(current_mode, targets, header_text, 50)
     auth_layout.wins.header:set_buf(header_buf)
@@ -140,20 +140,25 @@ local function swap_layout()
     auth_layout.wins.input1:focus()
 end
 
-local submit_fn = current_mode == "login" and submit_login or submit_register
 local function build_layout()
-    local input_count = 2
     local width = 50
     local curr_win_idx = 1
 
     local form_keys = {
         ["<Tab>"] = {
             function()
+                local input_count = current_mode == "login" and 2 or 3
                 curr_win_idx = next_input(curr_win_idx, input_count)
             end,
             mode = { "n", "i" }
         },
-        ["<CR>"] = { submit_fn, mode = { "n", "i", "v" } },
+        ["<CR>"] = {
+            function()
+                local fn = current_mode == "login" and submit_login or submit_register
+                fn()
+            end,
+            mode = { "n", "i", "v" }
+        },
         q = {
             function()
                 if auth_layout then
@@ -166,18 +171,18 @@ local function build_layout()
         },
         ["1"] = {
             function()
-                current_mode = "login"
+                current_mode = "register"
                 swap_layout()
             end,
             mode = { "n", "i" }
         },
         ["2"] = {
             function()
-                current_mode = "register"
+                current_mode = "login"
                 swap_layout()
             end,
             mode = { "n", "i" }
-        }
+        },
     }
 
     local wins = {}
@@ -188,10 +193,10 @@ local function build_layout()
         box = "vertical",
     }
 
-    local header_text = ("[1] Login  [2] Register")
+    local header_text = ("[1] Register  [2] Login")
     local targets = {
-        login = "%[1%] Login",
-        register = "%[2%] Register"
+        login = "%[2%] Login",
+        register = "%[1%] Register"
     }
 
     local header_buf = build_header_buf(current_mode, targets, header_text, width)
@@ -209,7 +214,6 @@ local function build_layout()
         wins = wins
     })
 
-    auth_layout.wins.input3:hide()
     vim.schedule(function()
         if auth_layout and auth_layout.wins.input1 then
             auth_layout.wins.input1:focus()
