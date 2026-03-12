@@ -223,11 +223,6 @@ local function build_layout()
 end
 
 M.toggle = function()
-    -- local existing_token = token.load_token()
-    -- if existing_token then
-    --     vim.notify("Already logged in", vim.log.levels.INFO)
-    --     return
-    -- end
     if auth_layout then
         auth_layout:close()
         auth_layout = nil
