@@ -49,7 +49,6 @@ local function submit_auth_form(email, password, endpoint, succes_msg, failure_m
     })
 end
 
-
 local function submit_register()
     local email    = vim.trim(auth_layout.wins.input1:lines(1, 1)[1]) or ""
     local password = vim.trim(auth_layout.wins.input2:lines(1, 1)[1]) or ""
@@ -101,18 +100,24 @@ local function build_inputs(title, form_keys)
     return inputs
 end
 
+local auth_ns = vim.api.nvim_create_namespace("auth_ui")
 
-local function build_header(mode, container_width)
+local function build_header(mode, targets, container_width)
     local buf = vim.api.nvim_create_buf(false, true)
 
-    local login_text = (mode == "login" and " ◉ [1] Login " or " ○ [1] Login ")
-    local reg_text = (mode == "register" and " ◉ [2] Register " or " ○ [2] Register ")
-    local header_text = login_text .. "    " .. reg_text
+    local target = targets[mode]
 
-    local centered_text = helper.center_text(header_text, container_width)
+    local text = (" [1] Login  [2] Register ")
+    local centered_text = helper.center_text(text, container_width)
 
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, { centered_text })
     vim.bo[buf].modifiable = false
+
+    local start_idx, end_idx = string.find(centered_text, target)
+    vim.api.nvim_buf_set_extmark(buf, auth_ns, 0, start_idx - 1, {
+        end_col = end_idx,
+        hl_group = "DiagnosticInfo",
+    })
 
     return Snacks.win({
         buf = buf,
@@ -178,7 +183,11 @@ local function build_layout()
         box = "vertical",
     }
 
-    wins.header = build_header(current_mode, width)
+    local targets = {
+        login = " %[1%] Login",
+        register = " %[2%] Register"
+    }
+    wins.header = build_header(current_mode, targets, width)
     table.insert(layout, { win = "header", height = 1 })
 
     local title = current_mode == "login" and "login" or "register"
