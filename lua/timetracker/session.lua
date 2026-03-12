@@ -1,11 +1,11 @@
 local curl = require("plenary.curl")
-local auth = require("timetracker.auth")
+local helper = require("timetracker.token")
 
 local M = {}
 
 local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
-local token = auth.load_token()
+local token = helper.load_token()
 
 local function new_session(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
     return {

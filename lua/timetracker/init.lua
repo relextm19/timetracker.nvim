@@ -1,13 +1,14 @@
 local auth = require("timetracker.auth")
 local session = require("timetracker.session")
 local dashboard = require("timetracker.dashboard")
+local token = require("timetracker.token")
 
 local M = {}
 
 M.setup = function()
     session.setup()
 
-    if not auth.load_token() then
+    if not token.load_token() then
         vim.defer_fn(function()
             auth.toggle()
         end, 100)

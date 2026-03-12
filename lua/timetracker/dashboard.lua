@@ -1,24 +1,13 @@
 local session = require("timetracker.session")
+local helper = require("timetracker.helper")
 
 local M = {}
 
 local dashboard_layout
 
-local function pad_right(str, target_width)
-    local spaces_needed = math.max(0, target_width - #str)
-    return str .. string.rep(" ", spaces_needed)
-end
-
-local function format_time(seconds)
-    local hours = math.floor(seconds / 3600)
-    local minutes = math.floor((seconds % 3600) / 60)
-    local secs = seconds % 60
-
-    return string.format("%d:%02d:%02d", hours, minutes, secs)
-end
 
 local function get_wrapped_lines(item, name_col_width)
-    local time_str = format_time(item.totalTime)
+    local time_str = helper.format_time(item.totalTime)
     local result = {}
     local remaining_name = item.name
 
@@ -29,7 +18,7 @@ local function get_wrapped_lines(item, name_col_width)
         remaining_name = string.sub(remaining_name, name_col_width + 1)
     end
 
-    local padded_name = pad_right(remaining_name, name_col_width)
+    local padded_name = helper.pad_right(remaining_name, name_col_width)
     table.insert(result, padded_name .. " " .. time_str)
 
     return result
@@ -40,7 +29,7 @@ local function build_list(items, win)
 
     local longest_time_str = -1
     for _, item in ipairs(items) do
-        longest_time_str = math.max(longest_time_str, #format_time(item.totalTime))
+        longest_time_str = math.max(longest_time_str, #helper.format_time(item.totalTime))
     end
     -- -1 accounts for the space in the final string
     local name_col_width = vim.api.nvim_win_get_width(win) - longest_time_str - 1

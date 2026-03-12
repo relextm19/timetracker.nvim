@@ -1,4 +1,6 @@
 local curl = require("plenary.curl")
+local token = require("timetracker.token")
+local helper = require("timetracker.helper")
 
 local M = {}
 
@@ -22,38 +24,31 @@ local function new_user(email, password)
     }
 end
 
-local function save_token(token)
-    local data_dir = vim.fn.stdpath("data")
-    local token_path = data_dir .. "/timetracker_token"
-
-    local file = io.open(token_path, "w")
-    if not file then
-        vim.notify("Failed to open file for saving token", vim.log.levels.ERROR)
-        return false
-    end
-
-    file:write(token)
-    file:close()
-
-    vim.fn.setfperm(token_path, "r--------")
-
-    return true
+local function submit_auth_form(email, password, endpoint, succes_msg, failure_msg)
+    curl.post("http://localhost:42069/" .. endpoint, {
+        body = vim.fn.json_encode(new_user(email, password)),
+        headers = {
+            content_type = "application/json"
+        },
+        callback = function(response)
+            vim.schedule(function()
+                if response.status == 201 or response.status == 200 then
+                    local success, parsed = pcall(vim.fn.json_decode, response.body)
+                    print(response.status)
+                    if success and parsed.token then
+                        token.save_token(parsed.token)
+                        vim.notify(succes_msg .. " ", vim.log.levels.INFO)
+                    else
+                        vim.notify("Malformed response from server", vim.log.levels.ERROR)
+                    end
+                else
+                    vim.notify(failure_msg .. " " .. response.status, vim.log.levels.ERROR)
+                end
+            end)
+        end
+    })
 end
 
-local function load_token()
-    local data_dir = vim.fn.stdpath("data")
-    local token_path = data_dir .. "/timetracker_token"
-
-    local file = io.open(token_path, "r")
-    if not file then
-        return nil
-    end
-
-    local token = file:read("*all")
-    file:close()
-
-    return token and token ~= "" and token or nil
-end
 
 local function submit_register()
     local email    = vim.trim(auth_layout.wins.input1:lines(1, 1)[1]) or ""
@@ -73,29 +68,9 @@ local function submit_register()
     auth_layout:close()
     auth_layout = nil
 
-    vim.cmd("stopinsert")
+    submit_auth_form(email, password, "register", "user registered", "failed to register")
 
-    curl.post("http://localhost:42069/register", {
-        body = vim.fn.json_encode(new_user(email, password)),
-        headers = {
-            content_type = "application/json"
-        },
-        callback = function(response)
-            vim.schedule(function()
-                if response.status == 201 then
-                    local success, parsed = pcall(vim.fn.json_decode, response.body)
-                    if success and parsed.token then
-                        save_token(parsed.token)
-                        vim.notify("Logged in successfully", vim.log.levels.INFO)
-                    else
-                        vim.notify("Malformed response from server", vim.log.levels.ERROR)
-                    end
-                else
-                    vim.notify("Failed to register: " .. response.status, vim.log.levels.ERROR)
-                end
-            end)
-        end
-    })
+    vim.cmd("stopinsert")
 end
 
 local function submit_login()
@@ -108,30 +83,9 @@ local function submit_login()
 
     auth_layout:close()
     auth_layout = nil
-
     vim.cmd("stopinsert")
 
-    curl.post("http://localhost:42069/login", {
-        body = vim.fn.json_encode(new_user(email, password)),
-        headers = {
-            content_type = "application/json"
-        },
-        callback = function(response)
-            vim.schedule(function()
-                if response.status == 200 then
-                    local success, parsed = pcall(vim.fn.json_decode, response.body)
-                    if success and parsed.token then
-                        save_token(parsed.token)
-                        vim.notify("Logged in successfully", vim.log.levels.INFO)
-                    else
-                        vim.notify("Malformed response from server", vim.log.levels.ERROR)
-                    end
-                else
-                    vim.notify("Failed to login: " .. response.status, vim.log.levels.ERROR)
-                end
-            end)
-        end
-    })
+    submit_auth_form(email, password, "login", "user logged in", "failed to login")
 end
 
 local function build_inputs(title, form_keys)
@@ -147,21 +101,15 @@ local function build_inputs(title, form_keys)
     return inputs
 end
 
-local function build_header(mode)
+
+local function build_header(mode, container_width)
     local buf = vim.api.nvim_create_buf(false, true)
 
     local login_text = (mode == "login" and " ◉ [1] Login " or " ○ [1] Login ")
     local reg_text = (mode == "register" and " ◉ [2] Register " or " ○ [2] Register ")
     local header_text = login_text .. "    " .. reg_text
 
-    local layout_width = 50
-    local text_width = vim.fn.strdisplaywidth(header_text)
-
-    local padding_amount = math.floor((layout_width - text_width) / 2)
-
-    local left_padding = string.rep(" ", math.max(0, padding_amount))
-
-    local centered_text = left_padding .. header_text
+    local centered_text = helper.center_text(header_text, container_width)
 
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, { centered_text })
     vim.bo[buf].modifiable = false
@@ -176,6 +124,7 @@ end
 local function build_layout()
     local submit_fn = current_mode == "login" and submit_login or submit_register
     local input_count = current_mode == "login" and 2 or 3
+    local width = 50
 
     local curr_win_idx = 1
 
@@ -224,12 +173,12 @@ local function build_layout()
     local wins = {}
     local layout = {
         backdrop = 60,
-        width = 50,
+        width = width,
         position = "float",
         box = "vertical",
     }
 
-    wins.header = build_header(current_mode)
+    wins.header = build_header(current_mode, width)
     table.insert(layout, { win = "header", height = 1 })
 
     local title = current_mode == "login" and "login" or "register"
@@ -254,7 +203,7 @@ local function build_layout()
 end
 
 M.toggle = function()
-    local existing_token = load_token()
+    -- local existing_token = token.load_token()
     -- if existing_token then
     --     vim.notify("Already logged in", vim.log.levels.INFO)
     --     return
@@ -268,7 +217,5 @@ M.toggle = function()
         build_layout()
     end
 end
-
-M.load_token = load_token
 
 return M
