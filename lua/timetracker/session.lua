@@ -3,6 +3,7 @@ local helper = require("timetracker.token")
 
 local M = {}
 
+-- maybe take this info from lsp
 local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
 local token = helper.load_token()
@@ -20,6 +21,11 @@ local function new_session(file_name, project_name, language_name, start_time, s
 end
 
 local function sendSession(session)
+    --if the user is using some plugin like lazy git or some other thging that doesnt provide language name no need to throw an error when sending session
+    if not session.languageName or session.languageName == "" then
+        return
+    end
+
     local headers = {
         content_type = "application/json"
     }
