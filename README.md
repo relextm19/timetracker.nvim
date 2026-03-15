@@ -1,6 +1,7 @@
 # timetracker.nvim
 
 A Neovim plugin that automatically tracks time spent on files and visualizes your coding activity via a native ui or a web interface.
+![dashboard](./readme_assets/screenshot-2026-03-15_21-59-03.png)
 
 ## Prerequisites
 
