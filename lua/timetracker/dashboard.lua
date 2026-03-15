@@ -1,4 +1,4 @@
-local session = require("timetracker.session")
+local session = require("timetracker.sessions")
 local helper = require("timetracker.helper")
 
 local M = {}
