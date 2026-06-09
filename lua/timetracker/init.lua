@@ -15,7 +15,7 @@ M.setup = function()
     end
 
     vim.keymap.set("n", "<leader>t", function() dashboard.toggle() end)
-    vim.keymap.set("n", "<leader>l", function() auth.toggle() end)
+    -- vim.keymap.set("n", "<leader>l", function() auth.toggle() end)
 end
 
 return M
