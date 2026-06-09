@@ -6,7 +6,6 @@ local M = {}
 -- maybe take this info from lsp
 local root_markers = { ".git", "package.json", "Makefile", "Cargo.toml", ".mod" }
 local start_times = {}
-local token = helper.load_token()
 
 local function new_session(file_name, project_name, language_name, start_time, start_date, end_time, end_date)
     return {
@@ -29,6 +28,7 @@ local function send_session(session)
     local headers = {
         content_type = "application/json"
     }
+    local token = helper.load_token()
     if token then
         headers["Authorization"] = "Bearer " .. token
     else
@@ -99,6 +99,7 @@ M.fetch_sessions = function(callback)
     local headers = {
         content_type = "application/json"
     }
+    local token = helper.load_token()
     if token then
         headers["Authorization"] = "Bearer " .. token
     else
